@@ -196,17 +196,21 @@ const App = () => {
                         <tbody>
                         {grants.map((grant, index) => (
                             <tr key={index}>
-                                <td>{grant['grant_name']}</td>
-                                <td>{grant['short_summary'] || 'N/A'}</td>
-                                <td>{grant['funding_organization']}</td>
-                                <td>{grant['grant_value'] ? `$${grant['grant_value'].toLocaleString()}` : 'N/A'}</td>
-                                <td>{grant['application_deadline']}</td>
-                                <td>{grant['eligible_countries']}</td>
-                                <td>{grant['sector/field']}</td>
+                                <td>{grant['Grant name/title']}</td>
+                                <td>{grant['Short summary'] || 'N/A'}</td>
+                                <td>{grant['Funding organization']}</td>
+                                <td>{grant['Grant value (numeric only)'] !== 'NA' ? `$${grant['Grant value (numeric only)'].toLocaleString()}` : 'N/A'}</td>
+                                <td>{grant['Application deadline']}</td>
+                                <td>{grant['Eligible countries']}</td>
+                                <td>{grant['Sector/field']}</td>
                                 <td>
-                                    {grant['link_URL'] ? (
+                                    {grant['link URL'] ? (
                                         <a
-                                            href={grant['link_URL']}
+                                            href={
+                                                grant['link URL'].startsWith('http')
+                                                    ? grant['link URL']
+                                                    : `https://epa.gov${grant['link URL']}`
+                                            }
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
