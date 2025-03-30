@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import axios from 'axios';
 import QuantIcon from './QuantilytixO.png';
 import BackgroundImage from './bg-image.jpg';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../src/firebase/firebaseConfig';
 
 const PageWrapper = styled.div`
@@ -150,11 +150,32 @@ const App = () => {
         setClicked(true);
         setLoading(true);
 
+        const queryValue = searchMode === 'keywords' ? searchTerms.trim() : searchURL.trim();
+
         try {
+            // 🔍 1. Check Firestore for cached query
+            const q = query(
+                collection(db, 'grantQueries'),
+                where('mode', '==', searchMode),
+                where('query', '==', queryValue)
+            );
+
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                // ✅ Cached result found
+                const cachedData = snapshot.docs[0].data();
+                setGrants(cachedData.results || []);
+                setLoading(false);
+                setClicked(false);
+                return;
+            }
+
+            // ❌ Not found in cache – proceed with API call
             let response;
 
             if (searchMode === 'keywords') {
-                const termsArray = searchTerms
+                const termsArray = queryValue
                     .split('\n')
                     .map(term => term.trim())
                     .filter(term => term);
@@ -162,10 +183,9 @@ const App = () => {
                 response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape', {
                     search_terms: termsArray
                 });
-
-            } else if (searchMode === 'url') {
+            } else {
                 response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape_url', {
-                    url: searchURL.trim()
+                    url: queryValue
                 });
             }
 
@@ -175,11 +195,12 @@ const App = () => {
             if (results.length > 0) {
                 await addDoc(collection(db, 'grantQueries'), {
                     mode: searchMode,
-                    query: searchMode === 'keywords' ? searchTerms : searchURL,
+                    query: queryValue,
                     timestamp: Timestamp.now(),
                     results
                 });
             }
+
         } catch (error) {
             console.error('Error fetching grants:', error);
             alert('Failed to fetch grant data.');
@@ -188,6 +209,7 @@ const App = () => {
             setLoading(false);
         }
     };
+
     return (
         <PageWrapper>
             <GlassContainer>
