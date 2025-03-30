@@ -3,6 +3,8 @@ import styled, { keyframes } from 'styled-components';
 import axios from 'axios';
 import QuantIcon from './QuantilytixO.png';
 import BackgroundImage from './bg-image.jpg';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../src/firebase/firebaseConfig';
 
 const PageWrapper = styled.div`
   display: flex;
@@ -137,7 +139,9 @@ const Logo = styled.img`
 
 
 const App = () => {
+    const [searchMode, setSearchMode] = useState('keywords'); // 'keywords' or 'url'
     const [searchTerms, setSearchTerms] = useState('');
+    const [searchURL, setSearchURL] = useState('');
     const [grants, setGrants] = useState([]);
     const [clicked, setClicked] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -147,16 +151,35 @@ const App = () => {
         setLoading(true);
 
         try {
-            const termsArray = searchTerms
-                .split('\n')
-                .map(term => term.trim())
-                .filter(term => term);
+            let response;
 
-            const response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape', {
-                search_terms: termsArray
-            });
+            if (searchMode === 'keywords') {
+                const termsArray = searchTerms
+                    .split('\n')
+                    .map(term => term.trim())
+                    .filter(term => term);
 
-            setGrants(response.data.grants || []);
+                response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape', {
+                    search_terms: termsArray
+                });
+
+            } else if (searchMode === 'url') {
+                response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape_url', {
+                    url: searchURL.trim()
+                });
+            }
+
+            const results = response?.data?.grants || [];
+            setGrants(results);
+
+            if (results.length > 0) {
+                await addDoc(collection(db, 'grantQueries'), {
+                    mode: searchMode,
+                    query: searchMode === 'keywords' ? searchTerms : searchURL,
+                    timestamp: Timestamp.now(),
+                    results
+                });
+            }
         } catch (error) {
             console.error('Error fetching grants:', error);
             alert('Failed to fetch grant data.');
@@ -165,16 +188,38 @@ const App = () => {
             setLoading(false);
         }
     };
-
     return (
         <PageWrapper>
             <GlassContainer>
                 <Title>Search for Grant Opportunities</Title>
-                <UrlInput
-                    placeholder="e.g., Renewable Energy Grants, Climate Change Research Grants"
-                    value={searchTerms}
-                    onChange={(e) => setSearchTerms(e.target.value)}
-                />
+                <select
+                    value={searchMode}
+                    onChange={(e) => setSearchMode(e.target.value)}
+                    style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        marginBottom: '15px',
+                        fontSize: '16px',
+                        backgroundColor: '#f0f0f0',
+                        border: 'none'
+                    }}
+                >
+                    <option value="keywords">Search by Keywords</option>
+                    <option value="url">Search by URL</option>
+                </select>
+                {searchMode === 'keywords' ? (
+                    <UrlInput
+                        placeholder="e.g., Renewable Energy Grants, Climate Change Research Grants"
+                        value={searchTerms}
+                        onChange={(e) => setSearchTerms(e.target.value)}
+                    />
+                ) : (
+                    <UrlInput
+                        placeholder="Paste a URL e.g. https://www.afdb.org/en/news-and-events/loans-grants"
+                        value={searchURL}
+                        onChange={(e) => setSearchURL(e.target.value)}
+                    />
+                )}
                 <SearchButton clicked={clicked} loading={loading} onClick={handleSearch}>
                     {loading ? <Spinner /> : '🔍 Explore Grants'}
                 </SearchButton>
