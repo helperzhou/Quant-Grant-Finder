@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-import axios from 'axios';
-import QuantIcon from './QuantilytixO.png';
-import BackgroundImage from './bg-image.jpg';
-import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../src/firebase/firebaseConfig';
+import React, { useState } from 'react'
+import styled from 'styled-components'
+import { Table, Input, Select, Button, Spin, message, Typography, Space } from 'antd'
+import { SearchOutlined, LinkOutlined } from '@ant-design/icons'
+import axios from 'axios'
+import QuantIcon from './QuantilytixO.png'
+import BackgroundImage from './bg-image.jpg'
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  query,
+  where,
+  getDocs
+} from 'firebase/firestore'
+import { db } from '../src/firebase/firebaseConfig'
+
+const { Title } = Typography
+const { Option } = Select
 
 const PageWrapper = styled.div`
   display: flex;
@@ -14,7 +26,7 @@ const PageWrapper = styled.div`
   background: url(${BackgroundImage}) repeat center center/cover;
   position: relative;
   padding: 20px;
-`;
+`
 
 const GlassContainer = styled.div`
   background: rgba(255, 255, 255, 0.2);
@@ -26,288 +38,230 @@ const GlassContainer = styled.div`
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.3);
-`;
-
-const Title = styled.h2`
-    color: #fff;
-    font-size: 24px;
-  margin-bottom: 15px;
-`;
-
-const UrlInput = styled.textarea`
-  width: 100%;
-  height: 100px;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(20px);
-  font-size: 16px;
-  color: black;
-  resize: none;
-  outline: none;
-  margin-bottom: 15px;
-
-  &::placeholder {
-    color: rgba(0, 0, 0, 0.5);
-  }
-`;
-
-const clickEffect = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
-`;
-
-const SearchButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  background: ${({ loading }) => (loading ? 'rgba(100, 100, 100, 0.8)' : 'rgba(0, 123, 255, 0.8)')};
-  color: white;
-  font-size: 16px;
-  font-weight: bold;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease-in-out, transform 0.1s ease-in-out;
-  animation: ${({ clicked }) => (clicked ? clickEffect : 'none')} 0.2s ease-in-out;
-  margin-bottom: 20px;
-
-  &:hover {
-    background: ${({ loading }) => (loading ? 'rgba(100, 100, 100, 0.8)' : 'rgba(0, 123, 255, 1)')};
-  }
-`;
-
-const Spinner = styled.div`
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top: 3px solid white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-  display: inline-block;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
-const GrantsTable = styled.table`
-  width: 100%;
-  margin-top: 20px;
-  border-collapse: collapse;
-  color: white;
-  font-size: 14px;
-
-  th, td {
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 10px;
-    text-align: left;
-  }
-
-  th {
-    background-color: rgba(0, 123, 255, 0.5);
-  }
-
-  td {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  a {
-    padding: 6px 12px;
-    background-color: #007bff;
-    color: white;
-    border-radius: 4px;
-    text-decoration: none;
-    display: inline-block;
-  }
-
-  a:hover {
-    background-color: #0056b3;
-  }
-`;
+  margin-top: 32px;
+`
 
 const Logo = styled.img`
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    width: 150px;  // Increased from 60px
-    height: auto;
-    opacity: 0.9;
-`;
-
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 150px;
+  height: auto;
+  opacity: 0.9;
+`
 
 const App = () => {
-    const [searchMode, setSearchMode] = useState('keywords'); // 'keywords' or 'url'
-    const [searchTerms, setSearchTerms] = useState('');
-    const [searchURL, setSearchURL] = useState('');
-    const [grants, setGrants] = useState([]);
-    const [clicked, setClicked] = useState(false);
-    const [loading, setLoading] = useState(false);
+  const [searchMode, setSearchMode] = useState('keywords')
+  const [searchTerms, setSearchTerms] = useState('')
+  const [searchURL, setSearchURL] = useState('')
+  const [grants, setGrants] = useState([])
+  const [loading, setLoading] = useState(false)
 
-    const handleSearch = async () => {
-        setClicked(true);
-        setLoading(true);
+  const handleSearch = async () => {
+    setLoading(true)
+    const queryValue = searchMode === 'keywords' ? searchTerms.trim() : searchURL.trim()
 
-        const queryValue = searchMode === 'keywords' ? searchTerms.trim() : searchURL.trim();
+    if (!queryValue) {
+      message.warning('Please enter search terms or a URL.')
+      setLoading(false)
+      return
+    }
 
-        try {
-            // 🔍 1. Check Firestore for cached query
-            const q = query(
-                collection(db, 'grantQueries'),
-                where('mode', '==', searchMode),
-                where('query', '==', queryValue)
-            );
+    try {
+      // Check Firestore cache
+      const q = query(
+        collection(db, 'grantQueries'),
+        where('mode', '==', searchMode),
+        where('query', '==', queryValue)
+      )
 
-            const snapshot = await getDocs(q);
+      const snapshot = await getDocs(q)
+      if (!snapshot.empty) {
+        const cachedData = snapshot.docs[0].data()
+        setGrants(cachedData.results || [])
+        setLoading(false)
+        return
+      }
 
-            if (!snapshot.empty) {
-                // ✅ Cached result found
-                const cachedData = snapshot.docs[0].data();
-                setGrants(cachedData.results || []);
-                setLoading(false);
-                setClicked(false);
-                return;
-            }
+      // API call
+      let response
+      if (searchMode === 'keywords') {
+        const termsArray = queryValue
+          .split('\n')
+          .map(term => term.trim())
+          .filter(term => term)
+        response = await axios.post(
+          'https://rairo-qxgrants-api.hf.space/scrape',
+          { search_terms: termsArray }
+        )
+      } else {
+        response = await axios.post(
+          'https://rairo-qxgrants-api.hf.space/scrape_url',
+          { url: queryValue }
+        )
+      }
 
-            // ❌ Not found in cache – proceed with API call
-            let response;
+      const results = response?.data?.grants || []
+      setGrants(results)
+      if (results.length > 0) {
+        await addDoc(collection(db, 'grantQueries'), {
+          mode: searchMode,
+          query: queryValue,
+          timestamp: Timestamp.now(),
+          results
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching grants:', error)
+      message.error('Failed to fetch grant data.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-            if (searchMode === 'keywords') {
-                const termsArray = queryValue
-                    .split('\n')
-                    .map(term => term.trim())
-                    .filter(term => term);
+  // --- Antd Table columns ---
+  const columns = [
+    {
+      title: 'Grant Name',
+      dataIndex: 'Grant name/title',
+      key: 'Grant name/title',
+      render: text => text || 'N/A',
+      width: 180
+    },
+    {
+      title: 'Summary',
+      dataIndex: 'Short summary',
+      key: 'Short summary',
+      render: text => text || 'N/A'
+    },
+    {
+      title: 'Organization',
+      dataIndex: 'Funding organization',
+      key: 'Funding organization',
+      render: text => text || 'N/A',
+      width: 150
+    },
+    {
+      title: 'Value',
+      dataIndex: 'Grant value',
+      key: 'Grant value',
+      render: value =>
+        typeof value === 'number'
+          ? `$${value.toLocaleString()}`
+          : value && value !== 'Not specified'
+          ? value
+          : 'N/A',
+      width: 110
+    },
+    {
+      title: 'Deadline',
+      dataIndex: 'Application deadline',
+      key: 'Application deadline',
+      render: text => text || 'N/A',
+      width: 100
+    },
+    {
+      title: 'Countries',
+      dataIndex: 'Eligible countries',
+      key: 'Eligible countries',
+      render: text => text || 'N/A',
+      width: 120
+    },
+    {
+      title: 'Sector',
+      dataIndex: 'Sector/field',
+      key: 'Sector/field',
+      render: text => text || 'N/A',
+      width: 120
+    },
+    {
+      title: 'Explore',
+      dataIndex: 'link URL',
+      key: 'link URL',
+      width: 100,
+      render: url =>
+        url && url !== 'Not specified'
+          ? url.startsWith('http')
+            ? (
+              <a href={url} target='_blank' rel='noopener noreferrer'>
+                <LinkOutlined /> Explore
+              </a>
+            ) : (
+              <span>{url}</span>
+            )
+          : 'N/A'
+    }
+  ]
 
-                response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape', {
-                    search_terms: termsArray
-                });
-            } else {
-                response = await axios.post('https://rairo-qxgrants-api.hf.space/scrape_url', {
-                    url: queryValue
-                });
-            }
+  return (
+    <PageWrapper>
+      <GlassContainer>
+        <Title style={{ color: '#1677ff' }}>Quantilytix Grant Finder</Title>
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space>
+            <Select
+              value={searchMode}
+              onChange={setSearchMode}
+              style={{ width: 180 }}
+            >
+              <Option value="keywords">Search by Keywords</Option>
+              <Option value="url">Search by URL</Option>
+            </Select>
+            <Input.TextArea
+              rows={searchMode === 'keywords' ? 4 : 2}
+              value={searchMode === 'keywords' ? searchTerms : searchURL}
+              onChange={e =>
+                searchMode === 'keywords'
+                  ? setSearchTerms(e.target.value)
+                  : setSearchURL(e.target.value)
+              }
+              placeholder={
+                searchMode === 'keywords'
+                  ? 'E.g., Renewable Energy Grants, Climate Change Research Grants'
+                  : 'Paste a URL e.g. https://www.afdb.org/en/news-and-events/loans-grants'
+              }
+              style={{
+                width: 350,
+                background: 'rgba(255,255,255,0.8)'
+              }}
+              onPressEnter={e => {
+                if (searchMode === 'url' || (searchMode === 'keywords' && e.ctrlKey)) handleSearch()
+              }}
+            />
+            <Button
+              icon={<SearchOutlined />}
+              type="primary"
+              loading={loading}
+              onClick={handleSearch}
+              style={{ fontWeight: 'bold' }}
+            >
+              Explore
+            </Button>
+          </Space>
+          {loading ? (
+            <Spin tip="Searching grants..." size="large" style={{ marginTop: 40 }} />
+          ) : grants.length > 0 ? (
+            <Table
+              dataSource={grants}
+              columns={columns}
+              rowKey={(record, idx) =>
+                record['Grant name/title'] + '-' + (record['Funding organization'] || idx)
+              }
+              scroll={{ x: 'max-content' }}
+              bordered
+              pagination={{ pageSize: 10 }}
+              style={{ background: 'rgba(255,255,255,0.8)', borderRadius: 8 }}
+            />
+          ) : (
+            <Typography.Text type="secondary" style={{ fontSize: 16 }}>
+              😕 No grants found for your search. Try different terms.
+            </Typography.Text>
+          )}
+        </Space>
+      </GlassContainer>
+      <Logo src={QuantIcon} alt='Quantilytix Logo' />
+    </PageWrapper>
+  )
+}
 
-            const results = response?.data?.grants || [];
-            setGrants(results);
-
-            if (results.length > 0) {
-                await addDoc(collection(db, 'grantQueries'), {
-                    mode: searchMode,
-                    query: queryValue,
-                    timestamp: Timestamp.now(),
-                    results
-                });
-            }
-
-        } catch (error) {
-            console.error('Error fetching grants:', error);
-            alert('Failed to fetch grant data.');
-        } finally {
-            setClicked(false);
-            setLoading(false);
-        }
-    };
-
-    return (
-        <PageWrapper>
-            <GlassContainer>
-                <Title>Search for Grant Opportunities</Title>
-                <select
-                    value={searchMode}
-                    onChange={(e) => setSearchMode(e.target.value)}
-                    style={{
-                        padding: '10px',
-                        borderRadius: '8px',
-                        marginBottom: '15px',
-                        fontSize: '16px',
-                        backgroundColor: '#f0f0f0',
-                        border: 'none'
-                    }}
-                >
-                    <option value="keywords">Search by Keywords</option>
-                    <option value="url">Search by URL</option>
-                </select>
-                {searchMode === 'keywords' ? (
-                    <UrlInput
-                        placeholder="e.g., Renewable Energy Grants, Climate Change Research Grants"
-                        value={searchTerms}
-                        onChange={(e) => setSearchTerms(e.target.value)}
-                    />
-                ) : (
-                    <UrlInput
-                        placeholder="Paste a URL e.g. https://www.afdb.org/en/news-and-events/loans-grants"
-                        value={searchURL}
-                        onChange={(e) => setSearchURL(e.target.value)}
-                    />
-                )}
-                <SearchButton clicked={clicked} loading={loading} onClick={handleSearch}>
-                    {loading ? <Spinner /> : '🔍 Explore Grants'}
-                </SearchButton>
-
-                {grants.length > 0 ? (
-                    <GrantsTable>
-                        <thead>
-                        <tr>
-                            <th>Grant Name</th>
-                            <th>Summary</th>
-                            <th>Organization</th>
-                            <th>Value</th>
-                            <th>Deadline</th>
-                            <th>Countries</th>
-                            <th>Sector</th>
-                            <th>Explore</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {grants.map((grant, index) => (
-                            <tr key={index}>
-                                <td>{grant['Grant name/title']}</td>
-                                <td>{grant['Short summary'] || 'N/A'}</td>
-                                <td>{grant['Funding organization']}</td>
-                                <td>
-  {grant['Grant value (numeric only)'] &&
-   grant['Grant value (numeric only)'] !== 'NA' &&
-   !isNaN(Number(grant['Grant value (numeric only)'])) ? (
-    `$${Number(grant['Grant value (numeric only)']).toLocaleString()}`
-  ) : 'N/A'}
-</td>
-
-                                <td>{grant['Application deadline']}</td>
-                                <td>{grant['Eligible countries']}</td>
-                                <td>{grant['Sector/field']}</td>
-                                <td>
-                                    {grant['link URL'] ? (
-                                        <a
-                                            href={
-                                                grant['link URL'].startsWith('http')
-                                                    ? grant['link URL']
-                                                    : `https://epa.gov${grant['link URL']}`
-                                            }
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            Explore
-                                        </a>
-                                    ) : (
-                                        'N/A'
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </GrantsTable>
-                ) : !loading && (
-                    <p style={{ marginTop: '20px', color: '#fff', fontSize: '16px' }}>
-                        😕 No grants found for your search. Try different terms.
-                    </p>
-                )}
-            </GlassContainer>
-
-            <Logo src={QuantIcon} alt="Quantilytix Logo" />
-        </PageWrapper>
-    );
-};
-
-export default App;
+export default App
