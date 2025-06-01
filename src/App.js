@@ -1,7 +1,23 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import { Table, Input, Select, Button, Spin, message, Typography, Space, Row, Col } from 'antd'
-import { SearchOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons'
+import {
+  Table,
+  Input,
+  Select,
+  Button,
+  Spin,
+  message,
+  Typography,
+  Row,
+  Col,
+  Tag,
+  Space
+} from 'antd'
+import {
+  SearchOutlined,
+  DownloadOutlined,
+  LinkOutlined
+} from '@ant-design/icons'
 import axios from 'axios'
 import QuantIcon from './QuantilytixO.png'
 import BackgroundImage from './bg-image.jpg'
@@ -15,7 +31,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../src/firebase/firebaseConfig'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 const { Option } = Select
 
 const PageWrapper = styled.div`
@@ -28,39 +44,38 @@ const PageWrapper = styled.div`
   padding: 20px;
 `
 const GlassContainer = styled.div`
-  background: rgba(255,255,255,0.22);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 16px;
   padding: 30px;
   width: 100%;
-  max-width: 1020px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.11);
-  border: 1px solid rgba(255,255,255,0.25);
-  margin-top: 32px;
+  max-width: 860px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.17);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  margin-top: 40px;
+  backdrop-filter: blur(8px);
 `
 const Logo = styled.img`
   position: absolute;
   bottom: 20px;
   right: 20px;
-  width: 150px;
+  width: 120px;
   height: auto;
   opacity: 0.9;
 `
 
-function grantsToCsv(grants) {
+function grantsToCsv (grants) {
   if (!grants.length) return ''
   const headers = [
     'Grant name/title',
-    'Short summary',
     'Funding organization',
     'Grant value',
     'Application deadline',
     'Eligible countries',
     'Sector/field',
+    'Summary',
     'link URL'
   ]
-  const csvRows = [
-    headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')
-  ]
+  const csvRows = [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')]
   grants.forEach(grant => {
     csvRows.push(
       headers
@@ -85,7 +100,8 @@ const App = () => {
 
   const handleSearch = async () => {
     setLoading(true)
-    const queryValue = searchMode === 'keywords' ? searchTerms.trim() : searchURL.trim()
+    const queryValue =
+      searchMode === 'keywords' ? searchTerms.trim() : searchURL.trim()
     if (!queryValue) {
       message.warning('Please enter search terms or a URL.')
       setLoading(false)
@@ -150,7 +166,9 @@ const App = () => {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `quantilytix-grants-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `quantilytix-grants-${
+      new Date().toISOString().split('T')[0]
+    }.csv`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -162,20 +180,20 @@ const App = () => {
       title: 'Grant Name',
       dataIndex: 'Grant name/title',
       key: 'Grant name/title',
-      sorter: (a, b) => (a['Grant name/title'] || '').localeCompare(b['Grant name/title'] || ''),
-      render: text => text || 'N/A'
-    },
-    {
-      title: 'Summary',
-      dataIndex: 'Short summary',
-      key: 'Short summary',
+      sorter: (a, b) =>
+        (a['Grant name/title'] || '').localeCompare(
+          b['Grant name/title'] || ''
+        ),
       render: text => text || 'N/A'
     },
     {
       title: 'Organization',
       dataIndex: 'Funding organization',
       key: 'Funding organization',
-      sorter: (a, b) => (a['Funding organization'] || '').localeCompare(b['Funding organization'] || ''),
+      sorter: (a, b) =>
+        (a['Funding organization'] || '').localeCompare(
+          b['Funding organization'] || ''
+        ),
       render: text => text || 'N/A'
     },
     {
@@ -198,21 +216,20 @@ const App = () => {
       title: 'Deadline',
       dataIndex: 'Application deadline',
       key: 'Application deadline',
-      sorter: (a, b) => (a['Application deadline'] || '').localeCompare(b['Application deadline'] || ''),
+      sorter: (a, b) =>
+        (a['Application deadline'] || '').localeCompare(
+          b['Application deadline'] || ''
+        ),
       render: text => text || 'N/A'
     },
     {
       title: 'Countries',
       dataIndex: 'Eligible countries',
       key: 'Eligible countries',
-      sorter: (a, b) => (a['Eligible countries'] || '').localeCompare(b['Eligible countries'] || ''),
-      render: text => text || 'N/A'
-    },
-    {
-      title: 'Sector',
-      dataIndex: 'Sector/field',
-      key: 'Sector/field',
-      sorter: (a, b) => (a['Sector/field'] || '').localeCompare(b['Sector/field'] || ''),
+      sorter: (a, b) =>
+        (a['Eligible countries'] || '').localeCompare(
+          b['Eligible countries'] || ''
+        ),
       render: text => text || 'N/A'
     },
     {
@@ -220,47 +237,76 @@ const App = () => {
       dataIndex: 'link URL',
       key: 'link URL',
       render: url =>
-        url && url !== 'Not specified'
-          ? (
-            <Button
-              type="primary"
-              icon={<LinkOutlined />}
-              size="small"
-              href={url.startsWith('http') ? url : `https://${url.split(' ')[0]}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              disabled={!url || url === 'Not specified'}
-              style={{ minWidth: 92 }}
-            >
-              Explore
-            </Button>
-          ) : (
-            <Button type="default" size="small" disabled>
-              No Link
-            </Button>
-          )
+        url && url !== 'Not specified' ? (
+          <Button
+            type='primary'
+            icon={<LinkOutlined />}
+            size='small'
+            href={url.startsWith('http') ? url : `https://${url.split(' ')[0]}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            disabled={!url || url === 'Not specified'}
+            style={{ minWidth: 92 }}
+          >
+            Explore
+          </Button>
+        ) : (
+          <Button type='default' size='small' disabled>
+            No Link
+          </Button>
+        )
     }
   ]
+
+  // Expandable row render function
+  const expandedRowRender = record => (
+    <div>
+      <Text strong>Summary:</Text>
+      <div style={{ marginBottom: 8 }}>
+        {record['Short summary'] || 'No description.'}
+      </div>
+      <Text strong>Sector:</Text>
+      <div style={{ marginBottom: 8 }}>
+        {Array.isArray(record['Sector/field']) ? (
+          record['Sector/field'].map((sector, idx) => (
+            <Tag color='blue' key={idx}>
+              {sector}
+            </Tag>
+          ))
+        ) : record['Sector/field'] ? (
+          record['Sector/field'].split(',').map((sector, idx) => (
+            <Tag color='blue' key={idx}>
+              {sector.trim()}
+            </Tag>
+          ))
+        ) : (
+          <Tag>No sector</Tag>
+        )}
+      </div>
+      {/* Add more details if needed */}
+    </div>
+  )
 
   return (
     <PageWrapper>
       <GlassContainer>
-        <Title style={{ color: '#1677ff', textAlign: 'left', marginBottom: 16 }}>Quantilytix Grant Finder</Title>
-        {/* Search controls */}
-        <Row gutter={12} style={{ marginBottom: 12 }}>
-          <Col xs={24} sm={24} md={24} lg={24}>
-            <Select
-              value={searchMode}
-              onChange={setSearchMode}
-              style={{ width: 220, marginBottom: 8 }}
-            >
-              <Option value="keywords">Search by Keywords</Option>
-              <Option value="url">Search by URL</Option>
-            </Select>
-          </Col>
-        </Row>
-        <Row gutter={12} style={{ marginBottom: 10 }}>
-          <Col xs={24} sm={18} md={20}>
+        <Title
+          style={{ color: '#1677ff', textAlign: 'left', marginBottom: 24 }}
+        >
+          Quantilytix Grant Finder
+        </Title>
+        {/* Mode Select */}
+        <Select
+          value={searchMode}
+          onChange={setSearchMode}
+          style={{ width: 220, marginBottom: 16, textAlign: 'left' }}
+        >
+          <Option value='keywords'>Search by Keywords</Option>
+          <Option value='url'>Search by URL</Option>
+        </Select>
+        {/* Search Input and Button Row */}
+        <Row gutter={8} style={{ marginBottom: 0 }}>
+          <Col flex='auto'>
             <Input.TextArea
               rows={searchMode === 'keywords' ? 4 : 2}
               value={searchMode === 'keywords' ? searchTerms : searchURL}
@@ -276,59 +322,77 @@ const App = () => {
               }
               style={{
                 width: '100%',
-                background: 'rgba(255,255,255,0.8)'
+                background: 'rgba(255,255,255,0.96)'
               }}
               onPressEnter={e => {
-                if (searchMode === 'url' || (searchMode === 'keywords' && e.ctrlKey)) handleSearch()
+                if (
+                  searchMode === 'url' ||
+                  (searchMode === 'keywords' && e.ctrlKey)
+                )
+                  handleSearch()
               }}
             />
           </Col>
-          <Col xs={24} sm={6} md={4} style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <Col>
             <Button
               icon={<SearchOutlined />}
-              type="primary"
+              type='primary'
               loading={loading}
               onClick={handleSearch}
-              style={{ fontWeight: 'bold', width: '100%' }}
-              size="large"
+              style={{ fontWeight: 'bold', height: '100%' }}
+              size='large'
             >
               Explore
             </Button>
           </Col>
         </Row>
-        <Row gutter={12} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={12}>
-            {/* Sorting is built-in to Antd Table, but you can add custom controls here if you want */}
-          </Col>
-          <Col xs={24} sm={12} md={12} style={{ textAlign: 'right' }}>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleExportCSV}
-              disabled={!grants.length}
-              style={{ marginBottom: 8 }}
-            >
-              Export CSV
-            </Button>
-          </Col>
-        </Row>
-        {loading ? (
-          <Spin tip="Searching grants..." size="large" style={{ marginTop: 40 }} />
-        ) : grants.length > 0 ? (
-          <Table
-            dataSource={grants}
-            columns={columns}
-            rowKey={(record, idx) =>
-              record['Grant name/title'] + '-' + (record['Funding organization'] || idx)
-            }
-            bordered
-            pagination={{ pageSize: 10 }}
-            style={{ background: 'rgba(255,255,255,0.93)', borderRadius: 8 }}
-          />
-        ) : (
-          <Typography.Text type="secondary" style={{ fontSize: 16 }}>
-            😕 No grants found for your search. Try different terms.
-          </Typography.Text>
+        {/* Export and table controls row */}
+        {grants.length > 0 && (
+          <Row justify='end' style={{ margin: '14px 0 0 0' }}>
+            <Col>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleExportCSV}
+                disabled={!grants.length}
+                style={{ marginBottom: 8 }}
+              >
+                Export CSV
+              </Button>
+            </Col>
+          </Row>
         )}
+
+        {/* Result Table */}
+        <div style={{ marginTop: grants.length > 0 ? 8 : 32 }}>
+          {loading ? (
+            <Spin
+              tip='Searching grants...'
+              size='large'
+              style={{ marginTop: 40 }}
+            />
+          ) : grants.length > 0 ? (
+            <Table
+              dataSource={grants}
+              columns={columns}
+              expandable={{
+                expandedRowRender,
+                rowExpandable: record => !!record['Short summary']
+              }}
+              rowKey={(record, idx) =>
+                record['Grant name/title'] +
+                '-' +
+                (record['Funding organization'] || idx)
+              }
+              bordered
+              pagination={{ pageSize: 3 }}
+              style={{ background: 'rgba(255,255,255,0.97)', borderRadius: 8 }}
+            />
+          ) : (
+            <Typography.Text type='secondary' style={{ fontSize: 16 }}>
+              😕 No grants found for your search. Try different terms.
+            </Typography.Text>
+          )}
+        </div>
       </GlassContainer>
       <Logo src={QuantIcon} alt='Quantilytix Logo' />
     </PageWrapper>
