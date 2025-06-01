@@ -266,7 +266,14 @@ const App = () => {
                                 <td>{grant['Grant name/title']}</td>
                                 <td>{grant['Short summary'] || 'N/A'}</td>
                                 <td>{grant['Funding organization']}</td>
-                                <td>{grant['Grant value (numeric only)'] !== 'NA' ? `$${grant['Grant value (numeric only)'].toLocaleString()}` : 'N/A'}</td>
+                                <td>
+  {grant['Grant value (numeric only)'] &&
+   grant['Grant value (numeric only)'] !== 'NA' &&
+   !isNaN(Number(grant['Grant value (numeric only)'])) ? (
+    `$${Number(grant['Grant value (numeric only)']).toLocaleString()}`
+  ) : 'N/A'}
+</td>
+
                                 <td>{grant['Application deadline']}</td>
                                 <td>{grant['Eligible countries']}</td>
                                 <td>{grant['Sector/field']}</td>
